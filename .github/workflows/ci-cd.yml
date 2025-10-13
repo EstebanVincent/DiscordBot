@@ -30,8 +30,8 @@ jobs:
     environment: DEV
     runs-on: ubuntu-latest
     permissions:
-      contents: admin
-      packages: admin
+      contents: write
+      packages: write
     steps:
       - uses: actions/checkout@v4
       - name: Lowercase repository name
@@ -67,7 +67,7 @@ jobs:
           git push origin ${{ steps.version.outputs.new_version }}
       - name: Save new minor version
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PAT_ADMIN_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: |
           gh variable set VERSION_MINOR --body "${{ steps.version.outputs.new_minor }}" --env DEV
