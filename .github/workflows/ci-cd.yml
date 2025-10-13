@@ -30,8 +30,8 @@ jobs:
     environment: DEV
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      packages: write
+      contents: admin
+      packages: admin
     steps:
       - uses: actions/checkout@v4
       - name: Lowercase repository name
