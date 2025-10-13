@@ -32,7 +32,6 @@ jobs:
     permissions:
       contents: write
       packages: write
-      variables: write
     steps:
       - uses: actions/checkout@v4
       - name: Lowercase repository name
@@ -71,4 +70,4 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: |
-          gh variable set VERSION_MINOR --body "${{ steps.version.outputs.new_minor }}"
+          gh variable set VERSION_MINOR --body "${{ steps.version.outputs.new_minor }}" --env ${{ github.environment }}
