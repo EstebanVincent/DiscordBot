@@ -26,10 +26,13 @@ async def meme(interaction: discord.Interaction, prompt: str):
     try:
         # Call the webhook with the prompt and API key
         webhook_payload = {"query": prompt}
-        headers = {"apiKey": os.getenv("API_KEY"), "Content-Type": "application/json"}
+        headers = {
+            "apiKey": os.getenv("WEBHOOK_N8N_IMGFLIP_KEY"),
+            "Content-Type": "application/json",
+        }
         async with httpx.AsyncClient() as httpx_client:
             response = await httpx_client.post(
-                os.getenv("WEBHOOK_URL"),
+                os.getenv("WEBHOOK_N8N_IMGFLIP_URL"),
                 json=webhook_payload,
                 headers=headers,
                 timeout=120,
