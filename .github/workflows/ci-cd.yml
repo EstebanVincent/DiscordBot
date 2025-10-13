@@ -6,6 +6,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
+  ENVIRONMENT: DEV
 
 jobs:
   test:
@@ -27,7 +28,7 @@ jobs:
 
   build-and-push:
     needs: test
-    environment: DEV
+    environment: ${{ env.ENVIRONMENT }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -70,4 +71,4 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: |
-          gh variable set VERSION_MINOR --body "${{ steps.version.outputs.new_minor }}" --env ${{ github.environment }}
+          gh variable set VERSION_MINOR --body "${{ steps.version.outputs.new_minor }}" --env ${{ env.ENVIRONMENT }}
