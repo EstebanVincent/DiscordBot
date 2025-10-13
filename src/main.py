@@ -56,6 +56,7 @@ async def meme(interaction: discord.Interaction, prompt: str):
             description=str(e),
             color=0xFF0000,
         )
+        await interaction.followup.send(embed=embed)
 
 
 client.run(os.getenv("DISCORD_TOKEN"))
