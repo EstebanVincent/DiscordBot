@@ -3,17 +3,9 @@ name: CI/CD Pipeline
 on:
   push:
     branches: [main]
-  workflow_dispatch:
-    inputs:
-      bump:
-        description: "Version bump (major|minor)"
-        type: choice
-        options: [major, minor]
-        default: minor
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: "${{ github.repository }}/discord-bot"
 
 jobs:
   test:
@@ -33,65 +25,25 @@ jobs:
           ruff check src
           ruff format --check src
 
-  version:
-    needs: test
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-    permissions:
-      packages: read
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
-      - id: version
-        shell: bash
-        env:
-          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          IMAGE_NAME_LOWER=$(echo "${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
-          TAGS_JSON=$(curl -s -H "Authorization: Bearer $GHCR_TOKEN" "https://ghcr.io/v2/${IMAGE_NAME_LOWER}/tags/list")
-          LATEST_TAG=$(echo "$TAGS_JSON" | jq -r '.tags | .[]' | grep -E '^v[0-9]+\.[0-9]+$' | sort -V | tail -n 1)
-
-          if [[ -z "$LATEST_TAG" ]]; then
-            MAJOR=0; MINOR=0
-          else
-            if [[ $LATEST_TAG =~ ^v([0-9]+)\.([0-9]+)$ ]]; then
-              MAJOR=${BASH_REMATCH[1]}; MINOR=${BASH_REMATCH[2]}
-            else
-              MAJOR=0; MINOR=0
-            fi
-          fi
-
-          BUMP_TYPE="minor"
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            BUMP_TYPE="${{ github.event.inputs.bump }}"
-          fi
-
-          if [[ "$BUMP_TYPE" == "major" ]]; then
-            if [[ -z "$LATEST_TAG" ]]; then
-              NEW_MAJOR=1; NEW_MINOR=0
-            else
-              NEW_MAJOR=$((MAJOR + 1)); NEW_MINOR=0
-            fi
-          else # minor
-            if [[ -z "$LATEST_TAG" ]]; then
-              NEW_MAJOR=0; NEW_MINOR=1
-            else
-              NEW_MAJOR=$MAJOR; NEW_MINOR=$((MINOR + 1))
-            fi
-          fi
-
-          NEW_VERSION="v${NEW_MAJOR}.${NEW_MINOR}"
-          echo "version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
-
   build-and-push:
-    needs: [test, version]
+    needs: test
+    environment: DEV
     runs-on: ubuntu-latest
     permissions:
       contents: write
       packages: write
+      variables: write
     steps:
       - uses: actions/checkout@v4
+      - name: Lowercase repository name
+        run: echo "IMAGE_NAME=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')/discord-bot" >> $GITHUB_ENV
+      - name: Calculate new version
+        id: version
+        run: |
+          NEW_MINOR=$((${{ vars.VERSION_MINOR }} + 1))
+          NEW_VERSION="v${{ vars.VERSION_MAJOR }}.${NEW_MINOR}"
+          echo "new_minor=$NEW_MINOR" >> "$GITHUB_OUTPUT"
+          echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:
@@ -104,7 +56,7 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.version.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.new_version }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -112,5 +64,11 @@ jobs:
         run: |
           git config user.email "action@github.com"
           git config user.name "GitHub Action"
-          git tag ${{ needs.version.outputs.version }}
-          git push origin ${{ needs.version.outputs.version }}
+          git tag ${{ steps.version.outputs.new_version }}
+          git push origin ${{ steps.version.outputs.new_version }}
+      - name: Save new minor version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh variable set VERSION_MINOR --body "${{ steps.version.outputs.new_minor }}"
