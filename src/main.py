@@ -1,4 +1,5 @@
 import os
+import traceback
 
 import discord
 import httpx
@@ -53,13 +54,18 @@ async def meme(interaction: discord.Interaction, prompt: str):
             )
             await interaction.followup.send(embed=embed)
 
-    except Exception as e:
+    except Exception:
+        exception_traceback = traceback.format_exc()
         embed = discord.Embed(
             title="Exception",
-            description=str(e),
+            description="See attached exception traceback",
             color=0xFF0000,
         )
-        await interaction.followup.send(embed=embed)
+        # Send error details as a file attachment to bypass character limits
+        error_file = discord.File(
+            fp=bytes(exception_traceback, "utf-8"), filename="exception_traceback.txt"
+        )
+        await interaction.followup.send(embed=embed, file=error_file)
 
 
 client.run(os.getenv("DISCORD_TOKEN"))
