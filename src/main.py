@@ -1,3 +1,4 @@
+import io
 import os
 import traceback
 
@@ -63,7 +64,8 @@ async def meme(interaction: discord.Interaction, prompt: str):
         )
         # Send error details as a file attachment to bypass character limits
         error_file = discord.File(
-            fp=bytes(exception_traceback, "utf-8"), filename="exception_traceback.txt"
+            fp=io.BytesIO(bytes(exception_traceback, "utf-8")),
+            filename="exception_traceback.txt",
         )
         await interaction.followup.send(embed=embed, file=error_file)
 
