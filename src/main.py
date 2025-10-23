@@ -55,8 +55,8 @@ async def meme(interaction: discord.Interaction, prompt: str):
             )
             await interaction.followup.send(embed=embed)
 
-    except Exception:
-        exception_traceback = traceback.format_exc()
+    except Exception as exc:
+        tb = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
         embed = discord.Embed(
             title="Exception",
             description="See attached exception traceback",
@@ -64,7 +64,7 @@ async def meme(interaction: discord.Interaction, prompt: str):
         )
         # Send error details as a file attachment to bypass character limits
         error_file = discord.File(
-            fp=io.BytesIO(bytes(exception_traceback, "utf-8")),
+            fp=io.BytesIO(bytes(tb, "utf-8")),
             filename="exception_traceback.txt",
         )
         await interaction.followup.send(embed=embed, file=error_file)
